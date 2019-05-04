@@ -1233,6 +1233,7 @@ multibandcompressor_audio_module::multibandcompressor_audio_module()
     page       = 0;
     bypass_    = 0;
     crossover.init(2, 4, 44100);
+    crossoverSC.init(2, 4, 44100);
 }
 
 void multibandcompressor_audio_module::activate()
@@ -1291,6 +1292,11 @@ void multibandcompressor_audio_module::params_changed()
     crossover.set_filter(1, *params[param_freq1]);
     crossover.set_filter(2, *params[param_freq2]);
 
+    crossoverSC.set_mode(mode + 1);
+    crossoverSC.set_filter(0, *params[param_freq0]);
+    crossoverSC.set_filter(1, *params[param_freq1]);
+    crossoverSC.set_filter(2, *params[param_freq2]);
+
     // set the params of all strips
     strip[0].set_params(*params[param_attack0], *params[param_release0], *params[param_threshold0], *params[param_ratio0], *params[param_knee0], *params[param_makeup0], *params[param_detection0], 1.f, *params[param_bypass0], !(solo[0] || no_solo));
     strip[1].set_params(*params[param_attack1], *params[param_release1], *params[param_threshold1], *params[param_ratio1], *params[param_knee1], *params[param_makeup1], *params[param_detection1], 1.f, *params[param_bypass1], !(solo[1] || no_solo));
@@ -1307,6 +1313,7 @@ void multibandcompressor_audio_module::set_sample_rate(uint32_t sr)
     }
     // set srate of crossover
     crossover.set_sample_rate(srate);
+    crossoverSC.set_sample_rate(srate);
     int meter[] = {param_meter_inL, param_meter_inR,  param_meter_outL, param_meter_outR,
                    param_output0, -param_compression0,
                    param_output1, -param_compression1,
@@ -1337,16 +1344,29 @@ uint32_t multibandcompressor_audio_module::process(uint32_t offset, uint32_t num
         uint32_t orig_numsamples = numsamples-offset;
         uint32_t orig_offset = offset;
         while(offset < numsamples) {
-            // cycle through samples
+	    /* We use 'sc' for the input to the gain detection of the 
+	     * compressors, even if the side chaining is disabled and thus 
+	     * this input is actually the actual 'input chain' instead of 
+	     * the 'side chain'. */
             float inL = ins[0][offset];
             float inR = ins[1][offset];
-            // in level
-            inR *= *params[param_level_in];
-            inL *= *params[param_level_in];
+            float scL = ins[2] ? ins[2][offset] : inL;
+            float scR = ins[3] ? ins[3][offset] : inR;
+            if (*params[param_sc_route] <= 0.5) {
+                scL = inL;
+                scR = inR;
+            }
+
+            // in level ('SC' input to compressors)
+            scR *= *params[param_level_in];
+            scL *= *params[param_level_in];
             // process crossover
             xin[0] = inL;
             xin[1] = inR;
             crossover.process(xin);
+            xsc[0] = scL;
+            xsc[1] = scR;
+            crossoverSC.process(xsc);
             // out vars
             float outL = 0.f;
             float outR = 0.f;
@@ -1356,8 +1376,10 @@ uint32_t multibandcompressor_audio_module::process(uint32_t offset, uint32_t num
                     // strip unmuted
                     float left  = crossover.get_value(0, i);
                     float right = crossover.get_value(1, i);
+                    float leftSC  = crossoverSC.get_value(0, i);
+                    float rightSC = crossoverSC.get_value(1, i);
                     // process gain reduction
-                    strip[i].process(left, right);
+                    strip[i].process(left, right, &leftSC, &rightSC);
                     // sum up output
                     outL += left;
                     outR += right;
@@ -1372,7 +1394,7 @@ uint32_t multibandcompressor_audio_module::process(uint32_t offset, uint32_t num
             outs[0][offset] = outL;
             outs[1][offset] = outR;
             
-            float values[] = {inL, inR, outL, outR,
+            float values[] = {scL, scR, outL, outR,
                 *params[param_bypass0] > 0.5f ? 0 : strip[0].get_output_level(), *params[param_bypass0] > 0.5f ? 1 : strip[0].get_comp_level(),
                 *params[param_bypass1] > 0.5f ? 0 : strip[1].get_output_level(), *params[param_bypass1] > 0.5f ? 1 : strip[1].get_comp_level(),
                 *params[param_bypass2] > 0.5f ? 0 : strip[2].get_output_level(), *params[param_bypass2] > 0.5f ? 1 : strip[2].get_comp_level(),

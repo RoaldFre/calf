@@ -214,11 +214,12 @@ private:
     typedef multibandcompressor_audio_module AM;
     static const int strips = 4;
     bool solo[strips];
-    float xout[strips], xin[2];
+    float xout[strips], xin[2], xsc[2];
     bool no_solo;
     float meter_inL, meter_inR, meter_outL, meter_outR;
     gain_reduction_audio_module strip[strips];
     dsp::crossover crossover;
+    dsp::crossover crossoverSC;
     dsp::bypass bypass;
     int mode, page, bypass_;
     mutable int redraw;

@@ -49,6 +49,11 @@ const char *periodical_mode_names[] = {
     { 1,           0.015625,    64,    0,  PF_FLOAT | PF_SCALE_GAIN | PF_CTL_KNOB | PF_UNIT_DB | PF_PROP_NOBOUNDS, NULL, "level_in", "Input Gain" }, \
     { 1,           0.015625,    64,    0,  PF_FLOAT | PF_SCALE_GAIN | PF_CTL_KNOB | PF_UNIT_DB | PF_PROP_NOBOUNDS, NULL, "level_out", "Output Gain" },
 
+#define BYPASS_AND_LEVEL_PARAMS_SC \
+    { 0,           0,           1,     0,  PF_BOOL | PF_CTL_TOGGLE, NULL, "bypass", "Bypass" }, \
+    { 1,           0.015625,    64,    0,  PF_FLOAT | PF_SCALE_GAIN | PF_CTL_KNOB | PF_UNIT_DB | PF_PROP_NOBOUNDS, NULL, "level_in", "Input/SC Gain" }, \
+    { 1,           0.015625,    64,    0,  PF_FLOAT | PF_SCALE_GAIN | PF_CTL_KNOB | PF_UNIT_DB | PF_PROP_NOBOUNDS, NULL, "level_out", "Output Gain" },
+
 #define METERING_PARAMS \
     { 0,           0,           1,     0,  PF_FLOAT | PF_SCALE_GAIN | PF_CTL_METER | PF_CTLO_LABEL | PF_UNIT_DB | PF_PROP_OUTPUT | PF_PROP_OPTIONAL, NULL, "meter_inL", "Meter-InL" }, \
     { 0,           0,           1,     0,  PF_FLOAT | PF_SCALE_GAIN | PF_CTL_METER | PF_CTLO_LABEL | PF_UNIT_DB | PF_PROP_OUTPUT | PF_PROP_OPTIONAL, NULL, "meter_inR", "Meter-InR" }, \
@@ -529,7 +534,7 @@ CALF_PORT_NAMES(multibandcompressor) = {"In L", "In R", "Out L", "Out R"};
 const char *multibandcompressor_detection_names[] = { "RMS", "Peak" };
 
 CALF_PORT_PROPS(multibandcompressor) = {
-    BYPASS_AND_LEVEL_PARAMS
+    BYPASS_AND_LEVEL_PARAMS_SC
     METERING_PARAMS
     { 120,         10,          20000, 0,  PF_FLOAT | PF_SCALE_LOG | PF_CTL_KNOB | PF_UNIT_HZ | PF_PROP_GRAPH, NULL, "freq0", "Split 1/2" },
     { 1000,        10,          20000, 0,  PF_FLOAT | PF_SCALE_LOG | PF_CTL_KNOB | PF_UNIT_HZ | PF_PROP_GRAPH, NULL, "freq1", "Split 2/3" },
@@ -540,6 +545,7 @@ CALF_PORT_PROPS(multibandcompressor) = {
     MULTI_BAND_COMP_PARAMS(2,3)
     MULTI_BAND_COMP_PARAMS(3,4)
     { 0,           0,           3,     0,  PF_INT | PF_SCALE_LINEAR,  NULL, "notebook", "Notebook" },
+    { 0,      0,  1,    0, PF_BOOL | PF_CTL_TOGGLE, NULL, "sc_route", "S/C Route" },
     {}
 };
 
